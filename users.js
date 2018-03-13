@@ -1,68 +1,80 @@
-const bcrypt = require('bcrypt');
-const { Client } = require('pg');
+/**
+ * `/users`
+   - `GET` skilar _síðu_ (sjá að neðan) af notendum
+   - Lykilorðs hash skal ekki vera sýnilegt
+ * `/users/:id`
+   - `GET` skilar stökum notanda ef til
+   - Lykilorðs hash skal ekki vera sýnilegt
+ * `/users/me`
+   - `GET` skilar innskráðum notanda (þ.e.a.s. _þér_)
+   - `PATCH` uppfærir sendar upplýsingar um notanda fyrir utan notendanafn, þ.e.a.s. nafn eða lykilorð, ef þau eru gild
+ * `/users/me/profile`
+   - `POST` setur eða uppfærir mynd fyrir notanda í gegnum Cloudinary og skilar slóð
+ */
+const { check, validationResult } = require('express-validator/check');
+const { sanitize } = require('express-validator/filter');
+const xss = require('xss');
 
-const connectionString = process.env.DATABASE_URL || 'postgres://notandi:@localhost/v3';
+const formValidation = [
+  check('username')
+    .isLength({ min: 1 })
+    .withMessage('Titill má ekki vera tómt'),
+  check('password')
+    .isLength({ min: 1 })
+    .withMessage('Texti má ekki vera tómt'),
+  sanitize('username').trim(),
+  sanitize('password').trim(),
+];
 
-async function query(q, values = []) {
-  const client = new Client({ connectionString });
-  await client.connect();
+const {
+    comparePasswords,
+    findByUsername,
+    findById, 
+    createUser,
+    findUsers,
+  } = require('./usersDb');
 
-  let result;
+ async function getUsers(req,res) {
+    const result = await findUsers();
+    return res.send(JSON.stringify(result.rows, null, "    "));
+ }
 
-  try {
-    result = await client.query(q, values);
-  } catch (err) {
-    throw err;
-  } finally {
-    await client.end();
-  }
+ async function getUserId(req,res){
+    const { id } = req.params;
+    const result = await findById(id);
+    return res.send(result);
+ }
 
-  return result;
+ async function getMe(req,res){
+    const id = req.user.id;
+    console.log(id);
+    const result = await findById(id);
+    return res.send(result);
+ }
+
+ async function registerUser(req, res) {
+    const validation = validationResult(req);
+		const {username, password} = req.body;
+		if (username < 1) {
+			res.status(400).json({
+				field: 'Notendarnafn',
+				error: 'Má ekki vera tómt',
+				});
+		}
+		if (password < 1) {
+			res.status(400).json({
+				field: 'Lykilorð',
+				error: 'Má ekki vera tómt',
+				});
+		}
+		await createUser(username,password);
+		return res.send('this');
 }
 
-async function comparePasswords(hash, password) {
-  const result = await bcrypt.compare(hash, password);
-
-  return result;
+ module.exports = {
+    getUsers,
+    getUserId,
+    getMe,
+    registerUser,
 }
-
-async function findByUsername(username) {
-  const q = 'SELECT * FROM users WHERE username = $1';
-
-  const result = await query(q, [username]);
-
-  if (result.rowCount === 1) {
-    return result.rows[0];
-  }
-
-  return null;
-}
-
-async function findById(id) {
-  const q = 'SELECT * FROM users WHERE id = $1';
-
-  const result = await query(q, [id]);
-
-  if (result.rowCount === 1) {
-    return result.rows[0];
-  }
-
-  return null;
-}
-
-async function createUser(username, password) {
-  const hashedPassword = await bcrypt.hash(password, 11);
-
-  const q = 'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *';
-
-  const result = await query(q, [username, hashedPassword]);
-
-  return result.rows[0];
-}
-
-module.exports = {
-  comparePasswords,
-  findByUsername,
-  findById,
-  createUser,
-}
+  

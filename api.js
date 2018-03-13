@@ -9,12 +9,22 @@ const {
 
 const { 
     login,
-    admin,
     requireAuthentication,
 } = require('./login');
 
+const{
+    getUsers,
+    getUserId,
+    getMe,
+    registerUser,
+} = require('./users');
+
+
 router.get('/',index);
 router.post('/login',login);
-router.get('/admin',requireAuthentication,admin);
+router.get('/users',getUsers);
+router.get('/users:id',getUserId);
+router.get('/users/me',requireAuthentication,getMe);
+router.post('/register',registerUser);
 
 module.exports = router;

@@ -1,9 +1,17 @@
+/**
+ * 
+ * `/register`
+   - `POST` býr til notanda og skilar án lykilorðs hash
+ * `/login`
+   - `POST` með notendanafni og lykilorði skilar token
+ */
+
 require('dotenv').config();
 const express = require('express');
 const passport = require('passport');
 const { Strategy, ExtractJwt } = require('passport-jwt');
 const jwt = require('jsonwebtoken');
-const users = require('./users');
+const users = require('./usersDb');
 
 const router = express.Router();
 
@@ -77,12 +85,9 @@ function requireAuthentication(req, res, next) {
     )(req, res, next);
 }
 
-async function admin(req, res) {
-    return res.json({data: 'top secret'});
-}
+
 
 module.exports = {
     login,
-    admin,
     requireAuthentication,
 };
