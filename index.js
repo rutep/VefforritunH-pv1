@@ -1,8 +1,8 @@
 
-async function index(req,res) {
-    return res.render('index');
+async function index(req, res) {
+  return res.render('index');
 }
 
 module.exports = {
-    index,
-  };
+  index,
+};

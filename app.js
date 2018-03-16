@@ -17,15 +17,15 @@ app.set('view engine', 'pug');
 
 
 function notFoundHandler(req, res, next) { // eslint-disable-line
-    res.status(404).render('error', { title: '404' });
-  }
-  
-  function errorHandler(err, req, res, next) { // eslint-disable-line
-    console.error(err);
-    res.status(500).render('error', { err });
-  }
+  res.status(404).render('error', { title: '404' });
+}
+
+function errorHandler(err, req, res, next) { // eslint-disable-line
+  console.error(err);
+  res.status(500).render('error', { err });
+}
 
 
 app.listen(port, () => {
-    console.info(`Server running at http://localhost:${port}/`);
-  });
+  console.info(`Server running at http://localhost:${port}/`);
+});
