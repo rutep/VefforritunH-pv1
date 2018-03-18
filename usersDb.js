@@ -33,7 +33,7 @@ async function findByUsername(username) {
 }
 
 async function findUsers() {
-  const q = 'SELECT * FROM users';
+  const q = 'SELECT id, username FROM users';
   const result = await query(q);
   if (result.rowCount > 0) {
     return result;
