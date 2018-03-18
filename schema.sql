@@ -1,4 +1,3 @@
-drop table books, Category, users, readBooks;
 
 CREATE TABLE users (
   id serial primary key,
