@@ -1,23 +1,5 @@
-/**
- * `/categories`
-   - `GET` skilar _síðu_ af flokkum
-   - `POST` býr til nýjan flokk og skilar
- * `/books`
-   - `GET` skilar _síðu_ af bókum
-   - `POST` býr til nýja bók ef hún er gild og skilar
- * `/books?search=query`
-   - `GET` skilar _síðu_ af bókum sem uppfylla leitarskilyrði, sjá að neðan
- * `/books/:id`
-   - `GET` skilar stakri bók
-   - `PATCH` uppfærir bók
- * `/users/:id/read`
-   - `GET` skilar _síðu_ af lesnum bókum notanda
- * `/users/me/read`
-   - `GET` skilar _síðu_ af lesnum bókum innskráðs notanda (eftir)
-   - `POST` býr til nýjan lestur á bók og skilar
- * `/users/me/read/:id`
-   - `DELETE` eyðir lestri bókar fyrir innskráðann notanda (eftir)
- */
+const { validationResult } = require('express-validator/check');
+const xss = require('xss');
 
 const {
   getCat,
@@ -31,6 +13,7 @@ const {
   updateDbBook,
   readBooks,
   findReadBooksById,
+  deleteBookById,
 } = require('./libraryDb.js');
 
 async function getCategory(req, res) {
@@ -40,7 +23,7 @@ async function getCategory(req, res) {
 
 async function putCategory(req, res) {
   const { category } = req.body;
-  const exists = await checkExCat(category);
+  const exists = await checkExCat(xss(category));
   if (exists) {
     return res.json({
       field: 'Category',
@@ -52,6 +35,10 @@ async function putCategory(req, res) {
 }
 
 async function putBook(req, res) {
+  const validation = validationResult(req);
+  if (!validation.isEmpty()) {
+    return res.status(422).json(validation.array());
+  }
   const { isbn13, title, category } = req.body;
   const exists = await checkExBook(isbn13, title);
   if (exists) {
@@ -64,7 +51,7 @@ async function putBook(req, res) {
   if (!catExists) {
     await createCat(category);
   }
-  const result = await createBook(isbn13, title, category);
+  const result = await createBook(xss(isbn13), xss(title), xss(category));
   return res.send(result);
 }
 
@@ -74,36 +61,56 @@ async function searchBooks(req, res) {
     const result = await libraryBooks();
     return res.send(result);
   }
-  const rows = await select(search);
+  const rows = await select(xss(search));
   return res.json(rows);
 }
 
 async function getBookById(req, res) {
   const { id } = req.params;
-  const result = await findBookById(id);
+  const result = await findBookById(xss(id));
   return res.send(result);
 }
 
 async function updateBook(req, res) {
+  const validation = validationResult(req);
+  if (!validation.isEmpty()) {
+    return res.status(422).json(validation.array());
+  }
   const { id } = req.params;
   const { title, category, isbn13 } = req.body;
-
-  await updateDbBook(id, title, category, isbn13);
+  await updateDbBook(xss(id), xss(title), xss(category), xss(isbn13));
   return res.json({
     Update: id,
   });
 }
 
 async function userReadBook(req, res) {
-  // const { id } = req.user.id;
-  const { userId, bookId, rating } = req.body;
-  const result = await readBooks(userId, bookId, rating);
+  const validation = validationResult(req);
+  if (!validation.isEmpty()) {
+    return res.status(422).json(validation.array());
+  }
+  const id = req.user.id;
+  const { bookId, rating } = req.body;
+  const result = await readBooks(xss(id), xss(bookId), xss(rating));
   return res.send(result);
 }
 
 async function getUserReadBooks(req, res) {
   const { id } = req.params;
   const result = await findReadBooksById(id);
+  return res.send(result);
+}
+
+async function getLogedUserReadBooks(req, res) {
+  const { id } = req.user;
+  const result = await findReadBooksById(id);
+  return res.send(result);
+}
+
+async function deleteLogedUserBookById(req, res) {
+  const { id } = req.user;
+  const bookId = req.params.id;
+  const result = await deleteBookById(id, bookId);
   return res.send(result);
 }
 
@@ -116,4 +123,6 @@ module.exports = {
   updateBook,
   userReadBook,
   getUserReadBooks,
+  getLogedUserReadBooks,
+  deleteLogedUserBookById,
 };

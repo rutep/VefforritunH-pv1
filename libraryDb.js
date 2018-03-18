@@ -38,14 +38,6 @@ async function checkExCat(category) {
   return false;
 }
 
-/**
- * id serial primary key,
-  ISBN13 character varying(255),
-  title character varying(255) ,
-  category character varying(255),
-  UNIQUE(title),
-  UNIQUE(ISBN13) 13 tölur
- */
 async function createBook(isbn13, title, category) {
   const q = 'INSERT INTO books (isbn13, title, category) VALUES ($1, $2, $3) RETURNING *';
   const result = await query(q, [isbn13, title, category]);
@@ -110,6 +102,12 @@ async function findReadBooksById(id) {
   return result.rows;
 }
 
+async function deleteBookById(userId, bookId) {
+  const q = 'DELETE FROM readbooks WHERE id = $1 AND userid = $2';
+  const result = await query(q, [bookId, userId]);
+  return result;
+}
+
 module.exports = {
   getCat,
   createCat,
@@ -122,4 +120,5 @@ module.exports = {
   updateDbBook,
   readBooks,
   findReadBooksById,
+  deleteBookById,
 };
